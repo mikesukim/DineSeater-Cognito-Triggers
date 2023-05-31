@@ -25,6 +25,6 @@ zip -r lambda_function.zip lambda_function.py tests
 4. Deploy the zip file
 ```bash
 aws lambda update-function-code \
-    --function-name DineSeater-Test-CognitoPreTokenGenerationTrigger \
+    --function-name DineSeater-Test-Post-AddToWaitingList \
     --zip-file fileb://<path_to_zip_file>
 ```
