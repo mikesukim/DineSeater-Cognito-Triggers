@@ -1,53 +1,51 @@
-'''
-Entry point of lambda function's execution.
-This lambda function will be executed at pre-token-generation phase as Cognito trigger.
-'''
+"""
+DineSeater allows only specific users to sign up.
+This lambda function is to enrich token with user's business into ID-TOKEN.
+"""
 
 import json
+from email_allowlist import userEmail_to_business 
 
 def lambda_handler(event, context):
-    business_name = "12345678"
+    try:
+        email = event['request']['userAttributes']['email']
+        # emit log to Cloudwatch
+        print ("User email = ", email)
+        if email not in userEmail_to_business : 
+            raise Exception("not associated email")
+            
+        add_business_name_to_user_attributes(event, userEmail_to_business[email])
+        add_business_name_to_token_id(event, userEmail_to_business[email])
+        
+    except Exception:
+        raise Exception("The email does not associate with restaurants. Please contact DineSeater.")
     
-    add_business_name_to_user_attributes(event, business_name)
-    add_business_name_to_token_id(event, business_name)
     
+    # Return to Amazon Cognito
     return event
-
-
-def add_business_name_to_user_attributes(event, business_name_value):
+    
+def add_business_name_to_user_attributes (event, business_name_value):
     try:
-        user_attributes = get_user_attributes(event)
-        user_attributes['business_name'] = business_name_value
-        set_user_attributes(event, user_attributes)
-    except Exception as e:
-        print("add_business_name_to_user_attributes exception with error message : " + str(e))
-        raise Exception("An exception occurred during the creation of a request to add business_name to user attributes.")
+        add_user_attribute(event, 'business_name', business_name_value)
+    except Exception:
+        raise Exception("exception occurred during creating request for \
+                         adding business_name to user attribute")
 
-
-def add_business_name_to_token_id(event, business_name_value):
-    try:
-        claims_override_details = get_claims_override_details(event)
-        claims_override_details['claimsToAddOrOverride'] = {'business_name': business_name_value}
-        set_claims_override_details(event, claims_override_details)
-    except Exception as e:
-        print("add_business_name_to_token_id exception with error message : " + str(e))
-        raise Exception("An exception occurred during the creation of a request to add business_name to token_id.")
-
-
-def get_user_attributes(event):
-    return event['request']['userAttributes']
-
-
-def set_user_attributes(event, user_attributes):
+def add_user_attribute (event, attribute_key, attribute_value):
+    user_attributes = event['request']['userAttributes']
+    user_attributes[attribute_key] = attribute_value
     event['response']['userAttributes'] = user_attributes
 
+def add_business_name_to_token_id (event, business_name_value):
+    try:
+        add_claim_to_token_id(event, 'business_name', business_name_value)
+    except Exception:
+        raise Exception("exception occurred during creating request for \
+                         adding business_name to token_id")
 
-def get_claims_override_details(event):
-    if 'claimsOverrideDetails' not in event['response'] or \
-        event['response']['claimsOverrideDetails'] is None :
-        event['response']['claimsOverrideDetails'] = {}
-    return event['response']['claimsOverrideDetails']
-
-
-def set_claims_override_details(event, claims_override_details):
-    event['response']['claimsOverrideDetails'] = claims_override_details
+def add_claim_to_token_id (event, claim_key, claim_value):
+    event['response']['claimsOverrideDetails'] = {
+        'claimsToAddOrOverride': {
+            claim_key : claim_value
+        }
+    }   
