@@ -6,6 +6,7 @@ This lambda function is to filter user email at Cognito signing up process.
 import json
 from email_allowlist import userEmail_to_business 
 
+# This sign up trigger is not used for now since sign up is allowed only by admin through AWS console.
 def lambda_handler(event, context):
     try:
         email = event['request']['userAttributes']['email']
